@@ -4,5 +4,6 @@ __pycache__
 *.zip
 *.json
 .idea/
+*.iml
 tests/.cache/v/cache/lastfailed
 .cache/v/cache/lastfailed

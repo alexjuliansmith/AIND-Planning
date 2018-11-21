@@ -3,7 +3,7 @@ from aimacode.planning import Action
 from aimacode.search import (
     Node, Problem,
 )
-from aimacode.utils import expr, Expr
+from aimacode.utils import expr
 from lp_utils import (
     FluentState, encode_state, decode_state,
 )
@@ -55,27 +55,29 @@ class AirCargoProblem(Problem):
         # forward search and Planning Graphs must use Propositional Logic
 
         from itertools import product
-        def generate_concrete_actions(schema: Action, *args: iter):
+        def generate_ground_actions(schema: Action, *arg_lists: iter, allow_repeated_terms = False):
             '''
-            Helper method to generate concrete Actions from Action Schemas.
+            Helper method to generate ground Actions from Action Schemas and lists of the possible ground terms.
 
             :param schema: Action schema to generate concrete actions for
-            :param args: List of lists of possible argument values for each variable in action schema, presented in same
-            order as variables are introduced in the Action schema.
+            :param arg_lists: List of lists of possible ground term substitutions for each variable in action schema,
+            presented in same order as variables are introduced in the Action schema name.
+            :param allow_repeated_terms: whether the same ground term can be repeated in an action arg list
+            e.g.  whether an action like Fly(P1, SFO, SFO) should be allowed.
 
             :return: List of concrete actions for all possible unique combinations of arguments.
             '''
-            args = [a for a in list(product(*args)) if len(a) == len(set(a))]
-            concrete_actions = []
-            for arg in args:
-                ground_args = list(map(expr, arg))
-                action = schema.substitute(Expr(schema.name, *schema.args), ground_args)
-                precond_pos = [schema.substitute(precond, ground_args) for precond in schema.precond_pos]
-                precond_neg = [schema.substitute(precond, ground_args) for precond in schema.precond_neg]
-                effect_add = [schema.substitute(effect, ground_args) for effect in schema.effect_add]
-                effect_rem = [schema.substitute(effect, ground_args) for effect in schema.effect_rem]
-                concrete_actions.append(Action(action, [precond_pos, precond_neg], [effect_add, effect_rem]))
-            return concrete_actions
+            arg_lists = [a for a in list(product(*arg_lists)) if allow_repeated_terms or len(a) == len(set(a))]
+            ground_actions = []
+            for arg_list in arg_lists:
+                ground_terms = list(map(expr, arg_list))
+                ground_action_name = schema.substitute(expr(schema.name), ground_terms)
+                precond_pos = [schema.substitute(precond, ground_terms) for precond in schema.precond_pos]
+                precond_neg = [schema.substitute(precond, ground_terms) for precond in schema.precond_neg]
+                effect_add = [schema.substitute(effect, ground_terms) for effect in schema.effect_add]
+                effect_rem = [schema.substitute(effect, ground_terms) for effect in schema.effect_rem]
+                ground_actions.append(Action(ground_action_name, [precond_pos, precond_neg], [effect_add, effect_rem]))
+            return ground_actions
 
         def load_actions():
             """Create all concrete Load actions and return a list
@@ -88,7 +90,7 @@ class AirCargoProblem(Problem):
                                  [[expr("In(c, p)")],                           # Add Effects
                                   [expr("At(c, a)")]])                          # Remove Effects
 
-            return generate_concrete_actions(load_schema, self.cargos, self.planes, self.airports)
+            return generate_ground_actions(load_schema, self.cargos, self.planes, self.airports)
 
         def unload_actions():
             """Create all concrete Unload actions and return a list
@@ -100,7 +102,7 @@ class AirCargoProblem(Problem):
                                    [[expr("In(c, p)"), expr("At(p, a)")], []],  # Preconditions
                                    [[expr("At(c, a)")],                         # Add Effects
                                     [expr("In(c, p)")]])                        # Remove Effects
-            return generate_concrete_actions(unload_schema, self.cargos, self.planes, self.airports)
+            return generate_ground_actions(unload_schema, self.cargos, self.planes, self.airports)
 
         def fly_actions():
             """Create all concrete Fly actions and return a list

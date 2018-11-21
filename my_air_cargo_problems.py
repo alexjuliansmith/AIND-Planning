@@ -249,10 +249,55 @@ def air_cargo_p1() -> AirCargoProblem:
 
 
 def air_cargo_p2() -> AirCargoProblem:
-    # TODO implement Problem 2 definition
-    pass
+    # DONE implement Problem 2 definition
+    cargos = ['C1', 'C2', 'C3']
+    planes = ['P1', 'P2', 'P3']
+    airports = ['JFK', 'SFO', 'ATL']
+    pos = [expr('At(C1, SFO)'),
+           expr('At(C2, JFK)'),
+           expr('At(C3, ATL)'),
+           expr('At(P1, SFO)'),
+           expr('At(P2, JFK)'),
+           expr('At(P3, ATL)'),
+           ]
+    neg = generate_negative_fluents(cargos, planes, airports, pos)
+    init = FluentState(pos, neg)
+    goal = [expr('At(C1, JFK)'),
+            expr('At(C2, SFO)'),
+            expr('At(C3, SFO)'),
+            ]
+    return AirCargoProblem(cargos, planes, airports, init, goal)
+
 
 
 def air_cargo_p3() -> AirCargoProblem:
-    # TODO implement Problem 3 definition
-    pass
+    # DONE implement Problem 3 definition
+    cargos = ['C1', 'C2', 'C3', 'C4']
+    planes = ['P1', 'P2']
+    airports = ['JFK', 'SFO', 'ATL', 'ORD']
+    pos = [expr('At(C1, SFO)'),
+           expr('At(C2, JFK)'),
+           expr('At(C3, ATL)'),
+           expr('At(C4, ORD)'),
+           expr('At(P1, SFO)'),
+           expr('At(P2, JFK)'),
+           ]
+    neg = generate_negative_fluents(cargos, planes, airports, pos)
+    init = FluentState(pos, neg)
+    goal = [expr('At(C1, JFK)'),
+            expr('At(C2, SFO)'),
+            expr('At(C3, JFK)'),
+            expr('At(C4, SFO)'),
+            ]
+    return AirCargoProblem(cargos, planes, airports, init, goal)
+
+def generate_negative_fluents(cargos, planes, airports, pos):
+    # Helper method to generate all the negative fluents for a given air cargo problem.
+    # Initial states in forward planning problems are complete state descriptions, so any possible fluent literal
+    # that is not explicitly positive, must be negative.
+    # Function makes use of domain knowledge:
+    # a) every plane and cargo is at one airport, at most
+    # b) every cargo is in one plane, at most
+    all_at = [expr("At({}, {})".format(x, a)) for x in planes + cargos for a in airports]
+    all_in = [expr("In({}, {})".format(c, p)) for c in cargos for p in planes]
+    return [expr for expr in all_at + all_in if expr not in pos]
